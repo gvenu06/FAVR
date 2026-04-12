@@ -96,16 +96,20 @@ export default function Sidebar({ activeView, onNavigate }: SidebarProps) {
 
       {/* Logo */}
       <div className="px-5 pb-5 flex items-center gap-2.5">
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center relative overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg,#a1c187 0%,#527141 100%)',
-            boxShadow: '0 6px 18px -6px rgba(130,169,104,0.55), inset 0 1px 0 rgba(245,239,223,0.35)'
-          }}
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 32 32"
+          className="shrink-0"
+          aria-label="FAVR"
         >
-          <span className="text-sm font-black text-cream-50 tracking-tighter relative z-10" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>F</span>
-          <span className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent" />
-        </div>
+          {/* Stem */}
+          <rect x="7" y="6" width="3" height="20" fill="#405935" />
+          {/* Top bar */}
+          <rect x="7" y="6" width="17" height="3" fill="#405935" />
+          {/* Mid bar — shorter, slightly offset */}
+          <rect x="7" y="14" width="11" height="3" fill="#82a968" />
+        </svg>
         <div className="flex flex-col leading-none">
           <span className="text-[17px] font-black tracking-tight text-surface-100 font-display">FAVR</span>
           <span className="text-[9px] text-sage-600 font-mono tracking-[0.2em] uppercase mt-0.5">v1.0 · sage</span>

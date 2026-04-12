@@ -3,6 +3,25 @@ import * as d3 from 'd3'
 import { useAnalysisStore } from '../../stores/analysisStore'
 import type { FavrService, FavrVulnerability, FavrDependency } from '../../../shared/types'
 
+// Strip scoped-package prefix (@scope/) and convert separators so service labels read cleanly.
+// Preserve common acronyms in uppercase; title-case everything else.
+const ACRONYMS = new Set([
+  'api','url','uri','sql','db','aws','gcp','cdn','ui','ux','cve','iam','http','https',
+  'json','xml','yaml','sso','oauth','cli','sdk','npm','vpc','s3','ec2','rds','dns',
+  'tcp','udp','tls','ssl','ci','cd','io','jwt','mfa','nfs','smtp','ftp','ssh','rpc',
+  'grpc','ml','ai','ip','os','pdf','csv','qr','sms','usb','utf','vm','css','html','js','ts'
+])
+const cleanName = (raw: string) => {
+  const base = raw.replace(/^@[^/]+\//, '').replace(/^@/, '').replace(/[-_/.]+/g, ' ').trim()
+  return base.split(/\s+/).filter(Boolean).map(w => {
+    const lower = w.toLowerCase()
+    if (ACRONYMS.has(lower)) return lower.toUpperCase()
+    return lower[0].toUpperCase() + lower.slice(1)
+  }).join(' ')
+}
+const initials = (raw: string) =>
+  cleanName(raw).split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 3).toUpperCase()
+
 // Cream + sage palette. Tier colors tuned for readability on warm cream.
 const TIER_COLORS: Record<string, string> = {
   critical: '#B4432E',   // deep brick
@@ -243,7 +262,7 @@ export default function DependencyGraph() {
 
     const linkFlow = linkGroup.selectAll<SVGPathElement, GraphLink>('path.link-flow')
       .data(links).enter().append('path')
-      .attr('class', 'link-flow graph-flow')
+      .attr('class', 'link-flow')
       .attr('fill', 'none')
       .attr('stroke', d => `url(#link-grad-${d.type})`)
       .attr('stroke-opacity', 0.9)
@@ -300,7 +319,7 @@ export default function DependencyGraph() {
 
     // Initials
     node.append('text')
-      .text(d => d.name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase())
+      .text(d => initials(d.name))
       .attr('fill', '#fcf8ed')
       .attr('font-size', 11)
       .attr('font-weight', 800)
@@ -322,7 +341,7 @@ export default function DependencyGraph() {
 
     // Name label
     node.append('text')
-      .text(d => d.name)
+      .text(d => cleanName(d.name))
       .attr('fill', '#273024')
       .attr('font-size', 11)
       .attr('font-weight', 600)
@@ -613,7 +632,7 @@ export default function DependencyGraph() {
                 style={{ background: TIER_COLORS[hoveredService.tier], boxShadow: `0 0 10px ${TIER_COLORS[hoveredService.tier]}` }}
               />
               <div className="text-[13px] font-bold text-surface-100 font-display leading-tight">
-                {hoveredService.name}
+                {cleanName(hoveredService.name)}
               </div>
             </div>
             <div className="flex items-center gap-2 mb-2">
@@ -695,7 +714,7 @@ function DrillDownPanel({
   const [tab, setTab] = useState<'vulns' | 'deps' | 'tasks'>('vulns')
   const nameOf = useMemo(() => {
     const m = new Map<string, string>()
-    allServices.forEach(s => m.set(s.id, s.name))
+    allServices.forEach(s => m.set(s.id, cleanName(s.name)))
     return m
   }, [allServices])
 
@@ -739,7 +758,7 @@ function DrillDownPanel({
               }}
             >
               <span className="text-lg font-black text-white tracking-tight relative z-10" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.25)' }}>
-                {service.name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase()}
+                {initials(service.name)}
               </span>
               <span className="absolute inset-0 bg-gradient-to-br from-white/25 to-transparent" />
             </div>
@@ -763,7 +782,7 @@ function DrillDownPanel({
                 )}
               </div>
               <h2 className="text-xl font-black font-display text-surface-100 leading-tight truncate">
-                {service.name}
+                {cleanName(service.name)}
               </h2>
               <p className="text-[11px] text-surface-400 mt-1 max-w-xl leading-snug">
                 {service.description}
@@ -852,7 +871,7 @@ function DrillDownPanel({
         <div className="flex-1 overflow-auto px-5 py-4">
           {tab === 'vulns' && (
             <div className="flex flex-col gap-2">
-              {vulns.length === 0 && <EmptyNote text="No vulnerabilities in this service. 🎉" />}
+              {vulns.length === 0 && <EmptyNote text="No vulnerabilities in this service." />}
               {vulns.map((v, i) => <VulnCard key={v.id} v={v} index={i} />)}
             </div>
           )}

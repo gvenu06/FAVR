@@ -36,21 +36,20 @@ const SEVERITY_COLORS: Record<string, string> = {
 interface PhaseInfo {
   id: AnalysisPhase
   label: string
-  icon: string
 }
 
 const SCAN_PHASES: PhaseInfo[] = [
-  { id: 'discovery',       label: 'Discovering services',              icon: '🔍' },
-  { id: 'docker',                  label: 'Scanning Docker images',   icon: '🐳' },
-  { id: 'dependencies',    label: 'Mapping dependencies',              icon: '🔗' },
-  { id: 'vulnerabilities', label: 'Querying vulnerability databases',  icon: '🛡' },
-  { id: 'graph',           label: 'Building attack graph',             icon: '📊' },
-  { id: 'bayesian',        label: 'Running Bayesian risk propagation', icon: '📈' },
-  { id: 'monte-carlo',     label: 'Monte Carlo simulation',           icon: '🎲' },
-  { id: 'pareto',          label: 'Computing Pareto frontier',         icon: '⚖' },
-  { id: 'blast-radius',    label: 'Analyzing blast radius',            icon: '💥' },
-  { id: 'scheduling',      label: 'Building patch schedule',           icon: '📅' },
-  { id: 'compliance',      label: 'Checking compliance frameworks',    icon: '✓' },
+  { id: 'discovery',       label: 'Discovering services' },
+  { id: 'docker',          label: 'Scanning Docker images' },
+  { id: 'dependencies',    label: 'Mapping dependencies' },
+  { id: 'vulnerabilities', label: 'Querying vulnerability databases' },
+  { id: 'graph',           label: 'Building attack graph' },
+  { id: 'bayesian',        label: 'Running Bayesian risk propagation' },
+  { id: 'monte-carlo',     label: 'Monte Carlo simulation' },
+  { id: 'pareto',          label: 'Computing Pareto frontier' },
+  { id: 'blast-radius',    label: 'Analyzing blast radius' },
+  { id: 'scheduling',      label: 'Building patch schedule' },
+  { id: 'compliance',      label: 'Checking compliance frameworks' },
 ]
 
 // Map phase to its index in the pipeline
@@ -209,6 +208,8 @@ export default function Dashboard() {
     setCodebasePath('')
     setScanStats(null)
     setShowResults(false)
+    setCompletedPhases(new Map())
+    setLoading(false)
   }
 
   // Load scan history on mount
@@ -265,7 +266,9 @@ export default function Dashboard() {
               }`}
             >
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-lg">📂</span>
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
                 <span className="text-sm font-bold">Scan Codebase</span>
               </div>
               <div className="text-[11px] text-surface-500 leading-relaxed">
@@ -281,7 +284,9 @@ export default function Dashboard() {
               }`}
             >
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-lg">📄</span>
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
                 <span className="text-sm font-bold">Upload Documents</span>
               </div>
               <div className="text-[11px] text-surface-500 leading-relaxed">
@@ -491,7 +496,19 @@ export default function Dashboard() {
     const currentPhaseIndex = PHASE_INDEX.get(phase as AnalysisPhase) ?? -1
 
     return (
-      <div className="h-full flex items-center justify-center overflow-auto py-6">
+      <div className="h-full flex flex-col overflow-auto py-6">
+        <div className="px-8 mb-2">
+          <button
+            onClick={handleExitToHome}
+            className="flex items-center gap-2 text-xs text-surface-500 hover:text-white transition-colors group"
+          >
+            <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span className="font-medium">Cancel &amp; Start Over</span>
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
         <div className="max-w-3xl w-full px-8 animate-scaleIn">
           {/* Header */}
           <div className="text-center mb-6">
@@ -598,6 +615,7 @@ export default function Dashboard() {
               {error}
             </div>
           )}
+        </div>
         </div>
       </div>
     )
