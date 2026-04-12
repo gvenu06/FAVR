@@ -4,6 +4,7 @@ import { useAgentStore } from '../stores/agentStore'
 import DependencyGraph from './charts/DependencyGraph'
 import ServiceHeatmap from './charts/ServiceHeatmap'
 import SeverityDonut from './charts/SeverityDonut'
+import MonteCarloViz from './MonteCarloViz'
 import type { AnalysisPhase } from '../../shared/types'
 
 // ─── Fix-All session types ──────────────────────────────────
@@ -490,14 +491,19 @@ export default function Dashboard() {
     const currentPhaseIndex = PHASE_INDEX.get(phase as AnalysisPhase) ?? -1
 
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="max-w-lg w-full px-8 animate-scaleIn">
+      <div className="h-full flex items-center justify-center overflow-auto py-6">
+        <div className="max-w-3xl w-full px-8 animate-scaleIn">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h2 className="text-xl font-black text-white mb-1">Analyzing</h2>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-black text-white mb-1 font-display">Analyzing</h2>
             <p className="text-xs text-surface-500">
               {codebasePath ? codebasePath.split(/[\\/]/).pop() : 'Running analysis pipeline'}
             </p>
+          </div>
+
+          {/* Monte Carlo live visualization */}
+          <div className="mb-5 animate-slideUp">
+            <MonteCarloViz />
           </div>
 
           {/* Phase list */}
@@ -1049,10 +1055,14 @@ function ResultsDashboard({ result, totalRisk, reduction, vulnCount, critCount, 
         />
       )}
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className={a('animate-slideUp stagger-7')}><DependencyGraph /></div>
-        <div className={a('animate-slideUp stagger-8')}><ServiceHeatmap /></div>
+      {/* Dependency graph — full width so the map has room to breathe */}
+      <div className={`${a('animate-slideUp stagger-7')} mb-4`}>
+        <DependencyGraph />
+      </div>
+
+      {/* Service Heatmap — collapsible */}
+      <div className={`${a('animate-slideUp stagger-8')} mb-6`}>
+        <HeatmapDropdown />
       </div>
 
       {/* Top 5 Priority Patches */}
@@ -1366,6 +1376,50 @@ function FixAllPanel({
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ─── Service Heatmap dropdown (collapsible) ───────────────────
+function HeatmapDropdown() {
+  const [open, setOpen] = useState(false)
+  const vulnCount = useAnalysisStore(s => s.result?.graph.vulnerabilities.length ?? 0)
+  const serviceCount = useAnalysisStore(s => s.result?.graph.services.length ?? 0)
+
+  return (
+    <div className="glass-card rounded-card overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-cream-50/50 focus-ring"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-sage-500 shadow-sage-glow" />
+          <h3 className="text-[13px] font-bold tracking-wide text-surface-100 font-display">
+            Service Risk Heatmap
+          </h3>
+          <span className="text-[10px] font-mono text-surface-400">
+            {serviceCount} services &middot; {vulnCount} vulns
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-surface-400">
+          <span className="text-[10px] uppercase tracking-widest font-semibold">
+            {open ? 'Hide' : 'Show'}
+          </span>
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 220ms ease' }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </button>
+      {open && (
+        <div className="border-t border-sage-500/15 animate-fadeIn">
+          <ServiceHeatmap />
+        </div>
+      )}
     </div>
   )
 }
