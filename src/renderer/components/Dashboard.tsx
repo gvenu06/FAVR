@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAnalysisStore } from '../stores/analysisStore'
 import { useAgentStore } from '../stores/agentStore'
 import DependencyGraph from './charts/DependencyGraph'
-import ServiceHeatmap from './charts/ServiceHeatmap'
 import SeverityDonut from './charts/SeverityDonut'
 import MonteCarloViz from './MonteCarloViz'
 import type { AnalysisPhase } from '../../shared/types'
@@ -623,23 +622,15 @@ export default function Dashboard() {
 
   // ─── Results Dashboard ─────────────────────────────────────
   const totalRisk = Math.round((result!.simulation.totalRiskBefore ?? 0) * 100)
-  const reduction = Math.round(result!.simulation.riskReduction ?? 0)
   const vulnCount = result!.graph.vulnerabilities.length
-  const critCount = result!.graph.vulnerabilities.filter(v => v.severity === 'critical').length
-  const complianceRisk = result!.complianceSummary ? Math.round(result!.complianceSummary.overallComplianceRisk * 100) : 0
   const urgentCompliance = result!.complianceSummary?.violations.reduce((s, v) => s + v.urgentCount, 0) ?? 0
-  const maxScheduleWeek = result!.schedule?.length > 0 ? Math.max(...result!.schedule.map(s => s.weekNumber)) : 0
 
   return (
     <ResultsDashboard
       result={result!}
       totalRisk={totalRisk}
-      reduction={reduction}
       vulnCount={vulnCount}
-      critCount={critCount}
-      complianceRisk={complianceRisk}
       urgentCompliance={urgentCompliance}
-      maxScheduleWeek={maxScheduleWeek}
       scanStats={scanStats}
       codebasePath={codebasePath}
       onExit={handleExitToHome}
@@ -648,45 +639,12 @@ export default function Dashboard() {
   )
 }
 
-// ─── Risk Gauge SVG ───────────────────────────────────────────
-function RiskGauge({ value, size = 100, strokeWidth = 8, animate: shouldAnimate }: { value: number; size?: number; strokeWidth?: number; animate: boolean }) {
-  const radius = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * radius
-  const progress = Math.min(value, 100) / 100
-  const dashOffset = circumference * (1 - progress)
-  const color = value > 70 ? '#EF4444' : value > 40 ? '#F59E0B' : '#22C55E'
-  const bgColor = value > 70 ? 'rgba(239,68,68,0.1)' : value > 40 ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)'
-  const grade = value > 80 ? 'F' : value > 60 ? 'D' : value > 40 ? 'C' : value > 20 ? 'B' : 'A'
-
-  return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#27272A" strokeWidth={strokeWidth} />
-        <circle
-          cx={size / 2} cy={size / 2} r={radius} fill="none"
-          stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
-          strokeDasharray={circumference} strokeDashoffset={dashOffset}
-          style={shouldAnimate ? { transition: 'stroke-dashoffset 1s ease-out' } : undefined}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-black text-white leading-none">{value}%</span>
-        <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5" style={{ color }}>{grade}</span>
-      </div>
-    </div>
-  )
-}
-
 // ─── Results Dashboard (extracted for count-up hooks) ─────────
-function ResultsDashboard({ result, totalRisk, reduction, vulnCount, critCount, complianceRisk, urgentCompliance, maxScheduleWeek, scanStats, codebasePath, onExit, animate }: {
+function ResultsDashboard({ result, totalRisk, vulnCount, urgentCompliance, scanStats, codebasePath, onExit, animate }: {
   result: NonNullable<ReturnType<typeof useAnalysisStore.getState>['result']>
   totalRisk: number
-  reduction: number
   vulnCount: number
-  critCount: number
-  complianceRisk: number
   urgentCompliance: number
-  maxScheduleWeek: number
   scanStats: { servicesFound: number; packagesScanned: number; vulnerabilitiesFound: number; ecosystems: string[]; unresolvedPackages?: number; dockerImagesScanned?: number; isMonorepo?: boolean; scanDurationMs?: number } | null
   codebasePath: string
   onExit: () => void
@@ -700,23 +658,8 @@ function ResultsDashboard({ result, totalRisk, reduction, vulnCount, critCount, 
     }
   }, [animate])
 
-  // Animated counters only on first view
-  const animRisk = useCountUp(animate ? totalRisk : 0, animate ? 700 : 0)
-  const animReduction = useCountUp(animate ? reduction : 0, animate ? 700 : 0)
-  const animVulns = useCountUp(animate ? vulnCount : 0, animate ? 700 : 0)
-  const animCrit = useCountUp(animate ? critCount : 0, animate ? 700 : 0)
-  const animCompliance = useCountUp(animate ? complianceRisk : 0, animate ? 700 : 0)
-  const animWeeks = useCountUp(animate ? maxScheduleWeek : 0, animate ? 400 : 0)
-
   // Helper: only apply animation class on first view
   const a = (cls: string) => animate ? cls : ''
-
-  const displayRisk = animate ? animRisk : totalRisk
-  const displayReduction = animate ? animReduction : reduction
-  const displayVulns = animate ? animVulns : vulnCount
-  const displayCrit = animate ? animCrit : critCount
-  const displayCompliance = animate ? animCompliance : complianceRisk
-  const displayWeeks = animate ? animWeeks : maxScheduleWeek
 
   const [exporting, setExporting] = useState(false)
   const [exported, setExported] = useState(false)
@@ -965,76 +908,6 @@ function ResultsDashboard({ result, totalRisk, reduction, vulnCount, critCount, 
         </div>
       )}
 
-      {/* Hero Section — Risk Gauge + Key Stats */}
-      <div className={`grid grid-cols-12 gap-4 mb-6 ${a('animate-slideUp stagger-1')}`}>
-        {/* Risk Gauge — spans 3 cols */}
-        <div className="col-span-3 bg-surface-900 border border-surface-800 rounded-card p-5 flex flex-col items-center justify-center card-hover">
-          <RiskGauge value={displayRisk} size={110} strokeWidth={9} animate={animate} />
-          <div className="text-[10px] text-surface-500 uppercase font-bold mt-2 tracking-wider">System Risk</div>
-          {result.simulation.riskConfidence && (
-            <div className="text-[9px] text-surface-600 font-mono mt-1">
-              {Math.round(result.simulation.riskConfidence.lowerBefore * 100)}–{Math.round(result.simulation.riskConfidence.upperBefore * 100)}% CI
-            </div>
-          )}
-        </div>
-
-        {/* Stat cards — spans 9 cols (5 cards) */}
-        <div className="col-span-9 grid grid-cols-5 gap-3">
-          <div className={`bg-surface-900 border border-surface-800 rounded-card p-4 card-hover ${a('animate-slideUp stagger-2')}`}>
-            <div className="flex items-center gap-1.5 mb-2">
-              <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-              <span className="text-[9px] text-surface-500 uppercase font-bold tracking-wider">Reduction</span>
-            </div>
-            <div className="text-2xl font-black text-green-400">-{displayReduction}%</div>
-            <div className="text-[10px] text-surface-600 mt-1">after remediation</div>
-          </div>
-
-          <div className={`bg-surface-900 border border-surface-800 rounded-card p-4 card-hover ${a('animate-slideUp stagger-3')}`}>
-            <div className="flex items-center gap-1.5 mb-2">
-              <svg className="w-3.5 h-3.5 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-              <span className="text-[9px] text-surface-500 uppercase font-bold tracking-wider">CVEs</span>
-            </div>
-            <div className="text-2xl font-black text-white">{displayVulns}</div>
-            <div className="text-[10px] text-surface-600 mt-1">total found</div>
-          </div>
-
-          <div className={`bg-surface-900 border border-surface-800 rounded-card p-4 card-hover ${a('animate-slideUp stagger-4')}`}>
-            <div className="flex items-center gap-1.5 mb-2">
-              <div className={`w-2 h-2 rounded-full bg-red-400 ${critCount > 0 ? 'status-blink' : ''}`} />
-              <span className="text-[9px] text-surface-500 uppercase font-bold tracking-wider">Critical</span>
-            </div>
-            <div className={`text-2xl font-black text-red-400 ${critCount > 0 ? 'animate-numberGlow' : ''}`}>{displayCrit}</div>
-            <div className="text-[10px] text-surface-600 mt-1">needs attention</div>
-          </div>
-
-          <div className={`bg-surface-900 border border-surface-800 rounded-card p-4 card-hover ${a('animate-slideUp stagger-5')}`}>
-            <div className="flex items-center gap-1.5 mb-2">
-              <svg className="w-3.5 h-3.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <span className="text-[9px] text-surface-500 uppercase font-bold tracking-wider">Compliance</span>
-            </div>
-            <div className={`text-2xl font-black ${complianceRisk > 50 ? 'text-purple-400' : 'text-surface-400'}`}>{displayCompliance}%</div>
-            <div className="text-[10px] text-surface-600 mt-1">compliance risk</div>
-          </div>
-
-          <div className={`bg-surface-900 border border-surface-800 rounded-card p-4 card-hover ${a('animate-slideUp stagger-6')}`}>
-            <div className="flex items-center gap-1.5 mb-2">
-              <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className="text-[9px] text-surface-500 uppercase font-bold tracking-wider">Schedule</span>
-            </div>
-            <div className="text-2xl font-black text-blue-400">{displayWeeks}wk</div>
-            <div className="text-[10px] text-surface-600 mt-1">to remediate</div>
-          </div>
-        </div>
-      </div>
-
       {/* Compliance Alerts */}
       {urgentCompliance > 0 && (
         <div className={`bg-purple-500/10 border border-purple-500/30 rounded-card p-4 mb-6 flex items-center justify-between animate-pulseGlow ${a('animate-slideUp stagger-7')}`}>
@@ -1078,10 +951,6 @@ function ResultsDashboard({ result, totalRisk, reduction, vulnCount, critCount, 
         <DependencyGraph />
       </div>
 
-      {/* Service Heatmap — collapsible */}
-      <div className={`${a('animate-slideUp stagger-8')} mb-6`}>
-        <HeatmapDropdown />
-      </div>
 
       {/* Top 5 Priority Patches */}
       <div className={`bg-surface-900 border border-surface-800 rounded-card p-5 mb-6 ${a('animate-fadeIn')}`} style={animate ? { animationDelay: '400ms' } : undefined}>
@@ -1204,37 +1073,81 @@ function ResultsDashboard({ result, totalRisk, reduction, vulnCount, critCount, 
         </div>
       </div>
 
-      {/* Bottom row: Donut + Engine Stats */}
+      {/* Bottom row: Donut + System Risk Gauge */}
       <div className={`grid grid-cols-2 gap-4 ${a('animate-fadeIn')}`} style={animate ? { animationDelay: '500ms' } : undefined}>
         <SeverityDonut />
-        <div className="bg-surface-900 border border-surface-800 rounded-card p-5 card-hover">
-          <div className="flex items-center gap-2 mb-4">
-            <svg className="w-4 h-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <h3 className="text-sm font-bold text-white">Engine Stats</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-surface-800/30 rounded-btn p-3">
-              <div className="text-lg font-black text-white">{result.simulation.iterations.toLocaleString()}</div>
-              <div className="text-[10px] text-surface-500">MC Simulations</div>
-            </div>
-            <div className="bg-surface-800/30 rounded-btn p-3">
-              <div className="text-lg font-black text-white">{Math.round(result.simulation.convergenceScore * 100)}%</div>
-              <div className="text-[10px] text-surface-500">Convergence</div>
-            </div>
-            <div className="bg-surface-800/30 rounded-btn p-3">
-              <div className="text-lg font-black text-white">{result.pareto.frontierIds.length}</div>
-              <div className="text-[10px] text-surface-500">Pareto Solutions</div>
-            </div>
-            <div className="bg-surface-800/30 rounded-btn p-3">
-              <div className="text-lg font-black text-white">{result.complianceSummary?.frameworks.length ?? 0}</div>
-              <div className="text-[10px] text-surface-500">Frameworks Checked</div>
-            </div>
-          </div>
-        </div>
+        <SystemRiskGauge />
       </div>
+    </div>
+  )
+}
+
+// ─── System Risk Gauge ──────────────────────────────────────
+function SystemRiskGauge() {
+  const result = useAnalysisStore(s => s.result)
+  if (!result) return null
+
+  const totalRisk = Math.round((result.simulation.totalRiskBefore ?? 0) * 100)
+  const riskGrade = totalRisk > 80 ? 'F' : totalRisk > 60 ? 'D' : totalRisk > 40 ? 'C' : totalRisk > 20 ? 'B' : 'A'
+
+  const rc = result.simulation.riskConfidence
+  const ciLow = rc ? Math.round(rc.lowerBefore * 100) : totalRisk
+  const ciHigh = rc ? Math.round(rc.upperBefore * 100) : totalRisk
+
+  // Gauge geometry
+  const size = 160
+  const strokeWidth = 14
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  // Start from bottom-left (~135°) and sweep 270°
+  const startAngle = 135
+  const sweepAngle = 270
+  const progress = Math.min(totalRisk, 100) / 100
+  const dashLen = circumference * (sweepAngle / 360)
+  const filledDash = dashLen * progress
+  const gapDash = dashLen - filledDash
+
+  const gradeColor = totalRisk > 70 ? '#D76B5A' : totalRisk > 40 ? '#E0953F' : '#82a968'
+
+  return (
+    <div className="glass-card rounded-card p-5 flex flex-col items-center justify-center card-hover">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="mb-3">
+        {/* Background track */}
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none"
+          stroke="currentColor"
+          className="text-surface-300"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={`${dashLen} ${circumference - dashLen}`}
+          strokeDashoffset={-circumference * (startAngle / 360)}
+          transform={`rotate(0, ${size / 2}, ${size / 2})`}
+        />
+        {/* Filled arc */}
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none"
+          stroke={gradeColor}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={`${filledDash} ${circumference - filledDash}`}
+          strokeDashoffset={-circumference * (startAngle / 360)}
+          transform={`rotate(0, ${size / 2}, ${size / 2})`}
+          style={{ transition: 'stroke-dasharray 0.8s ease-out' }}
+        />
+        {/* Center text */}
+        <text x={size / 2} y={size / 2 - 4} textAnchor="middle" dominantBaseline="central"
+          fill="currentColor" className="text-surface-100" fontSize="32" fontWeight="900" fontFamily="Inter, sans-serif">
+          {totalRisk}%
+        </text>
+        <text x={size / 2} y={size / 2 + 22} textAnchor="middle" dominantBaseline="central"
+          fill={gradeColor} fontSize="14" fontWeight="700" fontFamily="Inter, sans-serif">
+          {riskGrade}
+        </text>
+      </svg>
+      <div className="text-[11px] font-bold text-surface-300 uppercase tracking-widest mb-1">System Risk</div>
+      <div className="text-[10px] text-surface-500 font-mono">{ciLow}–{ciHigh}% CI</div>
     </div>
   )
 }
@@ -1398,46 +1311,3 @@ function FixAllPanel({
   )
 }
 
-// ─── Service Heatmap dropdown (collapsible) ───────────────────
-function HeatmapDropdown() {
-  const [open, setOpen] = useState(false)
-  const vulnCount = useAnalysisStore(s => s.result?.graph.vulnerabilities.length ?? 0)
-  const serviceCount = useAnalysisStore(s => s.result?.graph.services.length ?? 0)
-
-  return (
-    <div className="glass-card rounded-card overflow-hidden">
-      <button
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-cream-50/50 focus-ring"
-      >
-        <div className="flex items-center gap-2.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-sage-500 shadow-sage-glow" />
-          <h3 className="text-[13px] font-bold tracking-wide text-surface-100 font-display">
-            Service Risk Heatmap
-          </h3>
-          <span className="text-[10px] font-mono text-surface-400">
-            {serviceCount} services &middot; {vulnCount} vulns
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-surface-400">
-          <span className="text-[10px] uppercase tracking-widest font-semibold">
-            {open ? 'Hide' : 'Show'}
-          </span>
-          <svg
-            width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-            style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 220ms ease' }}
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </div>
-      </button>
-      {open && (
-        <div className="border-t border-sage-500/15 animate-fadeIn">
-          <ServiceHeatmap />
-        </div>
-      )}
-    </div>
-  )
-}

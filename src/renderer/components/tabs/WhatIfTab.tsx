@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useAnalysisStore } from '../stores/analysisStore'
-import type { FavrWhatIfResult } from '../../shared/types'
+import { useAnalysisStore } from '../../stores/analysisStore'
+import type { FavrWhatIfResult } from '../../../shared/types'
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: 'text-red-400 bg-red-500/10 border-red-500/30',
@@ -16,7 +16,6 @@ const SEV_DOT: Record<string, string> = {
   low: 'bg-blue-400'
 }
 
-// ─── Animated counter ─────────────────────────────────────────
 function useCountUp(target: number, duration = 600): number {
   const [value, setValue] = useState(0)
   const startRef = useRef<number | null>(null)
@@ -42,7 +41,6 @@ function useCountUp(target: number, duration = 600): number {
   return value
 }
 
-// ─── Mini Risk Gauge ──────────────────────────────────────────
 function MiniGauge({ value, size = 80, label }: { value: number; size?: number; label: string }) {
   const strokeWidth = 6
   const radius = (size - strokeWidth) / 2
@@ -72,7 +70,6 @@ function MiniGauge({ value, size = 80, label }: { value: number; size?: number; 
   )
 }
 
-// ─── Toggle Switch ────────────────────────────────────────────
 function Toggle({ enabled, onChange, label, icon }: { enabled: boolean; onChange: () => void; label: string; icon: JSX.Element }) {
   return (
     <div className="flex items-center justify-between">
@@ -90,7 +87,7 @@ function Toggle({ enabled, onChange, label, icon }: { enabled: boolean; onChange
   )
 }
 
-export default function WhatIfView() {
+export default function WhatIfTab() {
   const result = useAnalysisStore(s => s.result)
 
   const [maxBudget, setMaxBudget] = useState<number>(50)
@@ -129,22 +126,7 @@ export default function WhatIfView() {
     setMaxDowntime(300)
   }
 
-  if (!result) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center max-w-sm">
-          <div className="w-14 h-14 rounded-2xl bg-surface-900 border border-surface-800 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-surface-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 className="text-lg font-bold text-white mb-1">No Scenario Data</h2>
-          <p className="text-sm text-surface-500 leading-relaxed">Run an analysis from the Dashboard first, then explore tradeoffs with budget, downtime, and service constraints.</p>
-          <p className="text-[10px] text-surface-600 mt-3 font-mono">Press 1 to go to Dashboard</p>
-        </div>
-      </div>
-    )
-  }
+  if (!result) return null
 
   const totalCostAll = result.graph.vulnerabilities
     .filter(v => v.status === 'open')
@@ -174,22 +156,12 @@ export default function WhatIfView() {
   const scenarioRisk = whatIfResult ? Math.round(whatIfResult.residualRisk * 100) : null
 
   return (
-    <div className="h-full flex flex-col px-6 pb-6 overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-white">What-If Scenarios</h1>
-            {scenarioCount > 0 && (
-              <span className="text-[9px] bg-surface-800 text-surface-400 px-2 py-0.5 rounded-full font-bold">
-                {scenarioCount} run{scenarioCount !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-surface-500 mt-0.5">
-            Explore tradeoffs: constrain budget, downtime, or exclude services
-          </p>
-        </div>
+    <>
+      {/* Controls header */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-surface-500">
+          Explore tradeoffs: constrain budget, downtime, or exclude services
+        </p>
         <div className="flex items-center gap-2">
           {whatIfResult && (
             <button
@@ -222,10 +194,9 @@ export default function WhatIfView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-5 flex-1">
-        {/* Left: Controls — 4 cols */}
+      <div className="grid grid-cols-12 gap-5">
+        {/* Left: Controls */}
         <div className="col-span-4 flex flex-col gap-4">
-          {/* Active constraints summary */}
           {activeConstraints.length > 0 && (
             <div className="bg-surface-800/50 border border-surface-800 rounded-card px-4 py-3 flex items-center gap-2 animate-fadeIn">
               <svg className="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -326,7 +297,6 @@ export default function WhatIfView() {
                         : 'bg-surface-800/40 border border-surface-800 hover:bg-surface-800/70 hover:border-surface-700'
                     }`}
                   >
-                    {/* Checkbox */}
                     <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
                       isSkipped ? 'bg-red-500/20 border-red-500/50' : 'border-surface-600 group-hover:border-surface-500'
                     }`}>
@@ -348,10 +318,10 @@ export default function WhatIfView() {
           </div>
         </div>
 
-        {/* Right: Results — 8 cols */}
+        {/* Right: Results */}
         <div className="col-span-8">
           {!whatIfResult ? (
-            <div className="bg-surface-900 border border-surface-800 border-dashed rounded-card h-full flex items-center justify-center">
+            <div className="bg-surface-900 border border-surface-800 border-dashed rounded-card h-full flex items-center justify-center min-h-[300px]">
               <div className="text-center max-w-xs">
                 <div className="w-12 h-12 rounded-xl bg-surface-800 flex items-center justify-center mx-auto mb-4">
                   <svg className="w-6 h-6 text-surface-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -379,7 +349,6 @@ export default function WhatIfView() {
                   )}
                 </div>
 
-                {/* Three gauges side by side */}
                 <div className="flex items-center justify-around">
                   <MiniGauge value={fullRemRisk} label="Full Fix" />
                   <div className="flex flex-col items-center gap-1">
@@ -396,7 +365,6 @@ export default function WhatIfView() {
                   <MiniGauge value={noRemRisk} label="No Fix" />
                 </div>
 
-                {/* Risk delta */}
                 <div className="mt-4 pt-3 border-t border-surface-800 flex items-center justify-center gap-6">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-surface-500">vs Full Fix:</span>
@@ -493,9 +461,8 @@ export default function WhatIfView() {
                 </div>
               )}
 
-              {/* Patchable vs Skipped split view */}
+              {/* Patchable vs Skipped */}
               <div className="grid grid-cols-2 gap-4 animate-slideUp stagger-4">
-                {/* Patchable */}
                 <div className="bg-surface-900 border border-surface-800 rounded-card p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-2 h-2 rounded-full bg-green-400" />
@@ -517,7 +484,6 @@ export default function WhatIfView() {
                   </div>
                 </div>
 
-                {/* Skipped */}
                 <div className="bg-surface-900 border border-surface-800 rounded-card p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-2 h-2 rounded-full bg-red-400" />
@@ -569,9 +535,7 @@ export default function WhatIfView() {
                           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${SEV_DOT[service.tier] ?? 'bg-surface-500'}`} />
                           <span className={`text-xs font-bold w-36 truncate ${isSkipped ? 'text-red-400/70' : 'text-white'}`}>{service.name}</span>
                           <div className="flex-1 h-2 bg-surface-800 rounded-full overflow-hidden relative">
-                            {/* Original risk (faded) */}
                             <div className="absolute h-full rounded-full bg-surface-700 opacity-40" style={{ width: `${origRisk}%` }} />
-                            {/* Residual risk */}
                             <div
                               className={`relative h-full rounded-full transition-all duration-500 ${
                                 risk >= 70 ? 'bg-red-400' : risk >= 40 ? 'bg-amber-400' : 'bg-green-400'
@@ -593,11 +557,10 @@ export default function WhatIfView() {
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
-// ─── Stat Card ────────────────────────────────────────────────
 function StatCard({ value, suffix, label, color, icon }: { value: number; suffix?: string; label: string; color: string; icon: JSX.Element }) {
   const animated = useCountUp(value, 500)
   return (

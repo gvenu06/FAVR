@@ -90,7 +90,8 @@ export default function MonteCarloViz() {
       // Chart area: leave room for histogram strip at the bottom.
       const padL = 36, padR = 14, padT = 14
       const histoH = 32
-      const chartH = h - padT - histoH - 6
+      const histoGap = 18  // room for label below histogram
+      const chartH = h - padT - histoH - histoGap
       const chartW = w - padL - padR
       const xAt = (i: number) => padL + (i / STEPS) * chartW
       const yAt = (v: number) => padT + (1 - v) * chartH
@@ -222,7 +223,7 @@ export default function MonteCarloViz() {
           if (bins[i] > maxBin) maxBin = bins[i]
         }
         const bw = chartW / HISTO_BINS
-        const histTop = padT + chartH + 6
+        const histTop = padT + chartH + 6  // 6px gap between chart and histo
 
         // Baseline
         ctx.strokeStyle = 'rgba(64,89,53,0.2)'
@@ -267,12 +268,12 @@ export default function MonteCarloViz() {
         ctx.stroke()
         ctx.setLineDash([])
 
-        // Axis caption
+        // Axis caption — placed below the histogram baseline
         ctx.fillStyle = 'rgba(74,88,65,0.7)'
         ctx.font = '600 8.5px Inter, system-ui, sans-serif'
         ctx.textAlign = 'left'
         ctx.textBaseline = 'top'
-        ctx.fillText('RESIDUAL RISK DISTRIBUTION', padL, histTop + histoH - 10)
+        ctx.fillText('RESIDUAL RISK DISTRIBUTION', padL, histTop + histoH + 3)
       }
 
       // ── Stats refresh (throttled) ───────────────────────
@@ -322,7 +323,7 @@ export default function MonteCarloViz() {
       </div>
 
       {/* Canvas */}
-      <div ref={wrapRef} className="relative w-full" style={{ height: 200 }}>
+      <div ref={wrapRef} className="relative w-full" style={{ height: 220 }}>
         <canvas ref={canvasRef} className="absolute inset-0" />
         {/* Corner wash — parchment depth */}
         <div

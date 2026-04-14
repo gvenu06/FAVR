@@ -1,4 +1,4 @@
-import { useAnalysisStore } from '../stores/analysisStore'
+import { useAnalysisStore } from '../../stores/analysisStore'
 
 const DAY_COLORS: Record<string, string> = {
   Saturday: 'border-blue-500/30 bg-blue-500/5',
@@ -14,21 +14,14 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: 'bg-blue-500/20 border-blue-500/40 text-blue-400'
 }
 
-export default function ScheduleView() {
+export default function ScheduleTab() {
   const result = useAnalysisStore(s => s.result)
 
   if (!result || !result.schedule || result.schedule.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="text-center max-w-sm">
-          <div className="w-14 h-14 rounded-2xl bg-surface-900 border border-surface-800 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-surface-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <h2 className="text-lg font-bold text-white mb-1">No Schedule Yet</h2>
-          <p className="text-sm text-surface-500 leading-relaxed">Run an analysis from the Dashboard to generate a maintenance-window-aware patch schedule.</p>
-          <p className="text-[10px] text-surface-600 mt-3 font-mono">Press 1 to go to Dashboard</p>
+          <p className="text-sm text-surface-500 leading-relaxed">No schedule data available. The analysis may not have generated maintenance windows.</p>
         </div>
       </div>
     )
@@ -54,24 +47,24 @@ export default function ScheduleView() {
   const maxWeek = Math.max(...schedule.map(s => s.weekNumber))
 
   return (
-    <div className="h-full flex flex-col px-6 pb-6 overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <>
+      {/* Header stats */}
+      <div className="flex items-center gap-6 mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white mb-1">Maintenance Schedule</h1>
-          <p className="text-sm text-surface-500">
-            {schedule.length} patches across {maxWeek} weeks &middot; Respects maintenance windows
-          </p>
+          <div className="text-sm font-bold text-white">{schedule.length}</div>
+          <div className="text-[10px] text-surface-500">Total Patches</div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <div className="text-sm font-bold text-white">{totalCost}h</div>
-            <div className="text-[10px] text-surface-500">Total Effort</div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm font-bold text-white">{totalDowntime}m</div>
-            <div className="text-[10px] text-surface-500">Total Downtime</div>
-          </div>
+        <div>
+          <div className="text-sm font-bold text-white">{maxWeek}</div>
+          <div className="text-[10px] text-surface-500">Weeks</div>
+        </div>
+        <div>
+          <div className="text-sm font-bold text-white">{totalCost}h</div>
+          <div className="text-[10px] text-surface-500">Total Effort</div>
+        </div>
+        <div>
+          <div className="text-sm font-bold text-white">{totalDowntime}m</div>
+          <div className="text-[10px] text-surface-500">Total Downtime</div>
         </div>
       </div>
 
@@ -106,7 +99,6 @@ export default function ScheduleView() {
 
                   return (
                     <div key={patch.vulnId} className="mb-3 last:mb-0">
-                      {/* Info row */}
                       <div className="flex items-center gap-3 mb-1.5">
                         <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${sevStyle}`}>
                           {vuln.severity}
@@ -119,15 +111,12 @@ export default function ScheduleView() {
                         </span>
                       </div>
 
-                      {/* Gantt bar */}
                       <div className="relative h-6 bg-surface-800 rounded-btn overflow-hidden">
-                        {/* Window time markers */}
                         <div className="absolute inset-0 flex items-center">
                           {[0, 25, 50, 75].map(pct => (
                             <div key={pct} className="absolute h-full border-l border-surface-700/50" style={{ left: `${pct}%` }} />
                           ))}
                         </div>
-                        {/* Patch bar */}
                         <div
                           className={`absolute h-full rounded-btn border ${sevStyle} flex items-center px-2`}
                           style={{ left: `${barStart}%`, width: `${barWidth}%`, minWidth: '60px' }}
@@ -136,7 +125,6 @@ export default function ScheduleView() {
                         </div>
                       </div>
 
-                      {/* Dependencies */}
                       {patch.dependsOn.length > 0 && (
                         <div className="mt-1 text-[9px] text-surface-600">
                           Depends on: {patch.dependsOn.map(id => vulnMap.get(id)?.cveId ?? id).join(', ')}
@@ -172,6 +160,6 @@ export default function ScheduleView() {
           ))}
         </div>
       </div>
-    </div>
+    </>
   )
 }

@@ -4,9 +4,6 @@ import Dashboard from './components/Dashboard'
 import FlowsView from './components/FlowsView'
 import BudgetView from './components/BudgetView'
 import Settings from './components/Settings'
-import Stats from './components/Stats'
-import ScheduleView from './components/ScheduleView'
-import WhatIfView from './components/WhatIfView'
 import { useIpcListeners } from './hooks/useIpc'
 
 declare global {
@@ -48,17 +45,14 @@ const VIEW_KEYS: Record<string, View> = {
   '1': 'dashboard',
   '2': 'vulnerabilities',
   '3': 'analysis',
-  '4': 'comparison',
-  '5': 'schedule',
-  '6': 'whatif',
-  '7': 'settings',
+  '4': 'settings',
 }
 
 export default function App() {
   useIpcListeners()
   const [activeView, setActiveView] = useState<View>('dashboard')
 
-  // Keyboard shortcuts: 1-7 to switch views
+  // Keyboard shortcuts: 1-4 to switch views
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       // Don't trigger when typing in inputs
@@ -79,12 +73,6 @@ export default function App() {
         return <FlowsView />
       case 'analysis':
         return <BudgetView />
-      case 'comparison':
-        return <Stats />
-      case 'schedule':
-        return <ScheduleView />
-      case 'whatif':
-        return <WhatIfView />
       case 'settings':
         return <Settings />
     }

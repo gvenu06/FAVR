@@ -802,7 +802,7 @@ function DrillDownPanel({
         </div>
 
         {/* Stat row */}
-        <div className="px-5 pb-3 grid grid-cols-4 gap-2.5">
+        <div className="px-5 pb-3 grid grid-cols-3 gap-2.5">
           <StatTile
             label="Propagated risk"
             value={`${Math.round(risk * 100)}%`}
@@ -810,11 +810,6 @@ function DrillDownPanel({
           />
           <StatTile label="Vulnerabilities" value={String(vulns.length)} tint="#B4432E" muted={vulns.length === 0} />
           <StatTile label="Critical" value={String(criticalCount)} tint="#B4432E" muted={criticalCount === 0} />
-          <StatTile
-            label="SLA uptime"
-            value={`${(service.sla * 100).toFixed(2)}%`}
-            tint="#6A8F54"
-          />
         </div>
 
         {/* Tech stack chips */}
